@@ -28,7 +28,10 @@ Follow `PROJECT_GUIDE.md` for the step order — it has detailed what/how/why fo
 4. Use pathlib, logging (not print) in pipeline code, and functions with docstrings.
 5. When there are several ways to do something, name the alternative in one line
    (e.g. "`merge` vs `join`", "`RANK` vs `DENSE_RANK`") — these are interview questions.
-6. Don't over-engineer: no classes/frameworks unless needed. No Airflow, no Docker.
+6. For every key pandas or SQL technique, add one line with its **Excel equivalent** (and SQL/pandas
+   equivalent where relevant), e.g. "`isna().sum()` = Excel `COUNTBLANK` = SQL `COUNT(*) - COUNT(col)`".
+   If a technique isn't in `analyst_playbook.md` yet, add a row to the matching table there.
+7. Don't over-engineer: no classes/frameworks unless needed. No Airflow, no Docker.
 
 ## Interview notes — IMPORTANT
 After **every completed step** in PROJECT_GUIDE.md, append to `interview_notes.md` under the
@@ -49,6 +52,11 @@ Also keep the "Running metrics" table at the top of `interview_notes.md` updated
 - At the end of each step, add a short entry under **Timeline** (what was built, key numbers, any change of plan).
 - When I say "end of session", update the **Where things stand** and **Resume here** sections.
 - If an issue would make a good interview story, add or extend a STAR seed under **Behavioral story seeds**.
+
+## Checkpoint reviews
+`checkpoint_review.md` holds study material per checkpoint. When I say "checkpoint review", append a new
+section for the steps since the last one (same structure: pitch, numbers, behavioral Q&A, technical follow-ups,
+code review findings, self-test). Read section 7 of the existing file before Step 1.4.
 
 ## End of each day
 When I say "end of day", give me: a 5-question quiz on today's work, then update the

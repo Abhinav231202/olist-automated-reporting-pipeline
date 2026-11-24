@@ -8,13 +8,16 @@
 
 ## 0. The big picture
 
-### The business story (memorize this)
-> "An operations team at an e-commerce company built a monthly performance report by hand.
-> Every month someone downloaded new order files, cleaned them in Excel, copy-pasted into a
-> master sheet, recalculated KPIs and rebuilt charts. It took hours, broke easily and had errors.
-> I automated it end to end: new data files arrive → Python cleans and validates them → they load
-> incrementally into a SQL database → SQL runs data-quality checks and calculates KPIs → Python
-> generates an Excel report with charts, on a schedule, with no manual steps."
+### The business story (the "why" of the project)
+**Tell it as a scenario you designed, never as a real job.** It's the Situation in your project-level STAR.
+> "A common analytics problem: an e-commerce operations team gets new order files every month and builds its
+> performance report by hand in Excel: downloading, cleaning, copy-pasting, recalculating KPIs and rebuilding charts.
+> It's slow, error-prone and depends on one person. I designed this scenario and built the automated version end to
+> end on real data (Olist, ~100k orders, 9 tables): new files arrive → Python cleans and validates them → they load
+> incrementally into SQL → SQL runs data-quality checks and KPIs → Python generates the Excel report, on a schedule."
+
+Any "before" time (e.g. "about 3 hours by hand") is an **estimate**. Say "I estimated", not "it took".
+See `checkpoint_review.md` for how to turn this into STAR answers.
 
 ### How it fits together
 
@@ -157,6 +160,9 @@ Interviewers respect this. Never claim it was a real company's data.
 ---
 
 ## Step 1.3 — Explore / profile the data (1 hr)
+
+> 📘 **Read first:** `analyst_playbook.md`, Phase 1. It has the same 10 profiling checks done in Excel, Python and SQL,
+> plus interview answers. Try 2–3 of the Excel checks on `olist_orders_dataset.csv` before running this step.
 
 **What & why:** Before cleaning, measure the problems. Profiling turns "the data is messy" into
 "3.2% of delivery dates are missing and 610 products have no category". Specific numbers make
