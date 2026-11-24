@@ -54,7 +54,7 @@ In File Explorer the same folder is `DA-Project\data\raw`. The code uses `pathli
 3. Paste the step's prompt (in the 💬 boxes below).
 4. Read every explanation. If you can't explain a line, ask: "Explain this line like I'm in an interview."
 5. When a step works, say: **"Step X.X done — update interview_notes.md."**
-6. Commit to Git after each step: `git add . && git commit -m "Step X.X: <what>"`. The commit history shows your process.
+6. Commit to Git after each step: `git add .` then `git commit -m "Step X.X: <what>"` (two separate lines: PowerShell 5.1 does not support `&&`). The commit history shows your process.
 
 ---
 

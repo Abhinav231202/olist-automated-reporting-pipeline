@@ -42,6 +42,14 @@ matching section (do not rewrite earlier content). For each step add:
 
 Also keep the "Running metrics" table at the top of `interview_notes.md` updated.
 
+## Project journal — IMPORTANT
+`project_journal.md` is the story of the build (timeline + issues log + behavioral story seeds).
+- Whenever something goes wrong (an error, a wrong result, a bad assumption, a design change), add a row to
+  its **Issues log** table: step, problem/symptom, root cause, fix, lesson. Continue the numbering.
+- At the end of each step, add a short entry under **Timeline** (what was built, key numbers, any change of plan).
+- When I say "end of session", update the **Where things stand** and **Resume here** sections.
+- If an issue would make a good interview story, add or extend a STAR seed under **Behavioral story seeds**.
+
 ## End of each day
 When I say "end of day", give me: a 5-question quiz on today's work, then update the
 "Daily recap" section of `interview_notes.md`.
