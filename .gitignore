@@ -1,0 +1,7 @@
+data/
+db/
+logs/
+reports/
+__pycache__/
+*.docx
+interview_notes.md
