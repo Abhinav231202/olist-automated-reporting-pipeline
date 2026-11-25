@@ -4,7 +4,7 @@ Turns raw, inconsistent Olist files into analysis-ready DataFrames.
 
 One function per table. Each takes a DataFrame read *as raw text* (see read_csv_as_text)
 and returns (clean_df, stats_dict). Works on both the raw reference tables in data/raw/
-and any monthly file in data/incoming/ or data/holdback/. It never writes to data/.
+and any monthly file in data/incoming/, data/holdback/ or data/archive/. It never writes to data/.
 
 Cleaning order (checklist A–J in PROJECT_GUIDE.md):
   A. standardize text, turn blanks / whitespace-only strings into real nulls
@@ -20,7 +20,7 @@ Cleaning order (checklist A–J in PROJECT_GUIDE.md):
 
 Usage:
   python src/clean.py            → clean the raw reference tables, log stats
-  python src/clean.py 2017_11    → clean one monthly batch (incoming or holdback), log stats
+  python src/clean.py 2017_11    → clean one monthly batch (incoming, holdback or archive), log stats
 """
 
 import logging
@@ -36,6 +36,7 @@ ROOT     = pathlib.Path(__file__).resolve().parent.parent   # DA-Project/
 RAW      = ROOT / "data" / "raw"
 INCOMING = ROOT / "data" / "incoming"
 HOLDBACK = ROOT / "data" / "holdback"
+ARCHIVE  = ROOT / "data" / "archive"     # files the loader has already loaded (Step 2.2)
 
 # Every Olist timestamp uses this layout. An explicit format is strict: "2018-13-01" fails
 # (→ NaT) instead of being guessed, and parsing is faster than letting pandas infer.
@@ -470,23 +471,36 @@ def clean_sellers(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 
 # ── batch runners (used by the test now, and by the orchestrator in Step 3.2) ─
 
-def find_month_file(table: str, month: str) -> pathlib.Path:
-    """Locate <table>_<YYYY_MM>.csv in data/incoming or data/holdback (read-only)."""
-    for folder in (INCOMING, HOLDBACK):
+MONTH_TABLES = ("orders", "order_items", "payments", "reviews")   # the 4 files in every monthly batch
+
+
+def find_month_file(
+    table: str, month: str, folders: tuple[pathlib.Path, ...] = (INCOMING, HOLDBACK, ARCHIVE)
+) -> pathlib.Path:
+    """
+    Locate <table>_<YYYY_MM>.csv in the first folder that has it (read-only).
+    Default search: incoming → holdback → archive, so tests still find a month after
+    the loader (Step 2.2) has moved it to archive. The loader passes folders=(INCOMING,)
+    so it only ever cleans the exact files it is about to load and move.
+    """
+    for folder in folders:
         path = folder / f"{table}_{month}.csv"
         if path.exists():
             return path
-    raise FileNotFoundError(f"{table}_{month}.csv not found in incoming/ or holdback/")
+    names = ", ".join(f.name for f in folders)
+    raise FileNotFoundError(f"{table}_{month}.csv not found in {names}")
 
 
-def clean_month(month: str) -> dict[str, tuple[pd.DataFrame, dict]]:
+def clean_month(
+    month: str, folders: tuple[pathlib.Path, ...] = (INCOMING, HOLDBACK, ARCHIVE)
+) -> dict[str, tuple[pd.DataFrame, dict]]:
     """
     Clean one monthly batch (4 files). Payments are cleaned first so orders can flag
     'no payment'; orders before items so items can flag far-future shipping deadlines.
+    `folders` = where to look for the files (see find_month_file).
     Returns {table: (clean_df, stats)}.
     """
-    raw = {t: read_csv_as_text(find_month_file(t, month))
-           for t in ("orders", "order_items", "payments", "reviews")}
+    raw = {t: read_csv_as_text(find_month_file(t, month, folders)) for t in MONTH_TABLES}
     payments = clean_payments(raw["payments"])
     orders   = clean_orders(raw["orders"], payments=payments[0])
     items    = clean_items(raw["order_items"], orders=orders[0])

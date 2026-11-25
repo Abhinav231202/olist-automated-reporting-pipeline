@@ -4,7 +4,7 @@ test_clean.py  —  Step 1.4, checklist J: prove the cleaning worked.
 Runs clean.py on one or more monthly batches and reconciles the stats against
 data/mess_log.csv (the "answer key" of injected issues). Plain Python, no pytest.
 
-  python tests/test_clean.py                    → 2017_11 and 2018_07 (one incoming, one holdback)
+  python tests/test_clean.py                    → 2017_11 and 2018_07 (one incoming/archive, one holdback)
   python tests/test_clean.py 2017_05 2018_08    → any months you like
 
 Exit code 0 = every injected issue caught and every post-condition holds; 1 = something failed.

@@ -563,6 +563,8 @@ management, retries, monitoring and alerts.
 
 ## Step 3.5 — Package for interviews (2 hrs)
 
+> Use `docs/schema_diagram.png` as the data-model image in README.md.
+
 💬 **Prompt:**
 > Step 3.5. (1) Write README.md: business problem, architecture diagram (text), how to run, sample output,
 > data-quality approach, what I'd do next. (2) In interview_notes.md, turn the Decisions and Problems notes
