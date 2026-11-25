@@ -272,13 +272,34 @@ the report's Data Quality sheet and your **Running metrics** table.
 *"Tell me about a judgment call."* The missing delivery dates: you chose to flag instead of drop,
 because the missing value means "not delivered", which is information.
 
-💬 **Prompt:**
-> Step 1.4. We'll build `src/clean.py` one section at a time following the cleaning checklist (A–J) in
-> PROJECT_GUIDE.md. For each section: first ask me how I'd handle it, then write the code, then explain
-> the decision and the alternative. One function per table (`clean_orders`, `clean_items`, `clean_payments`,
-> `clean_reviews`, `clean_products`, `clean_customers`, `clean_sellers`), each returning
-> `(clean_df, stats_dict)`. At the end, write a quick test that runs clean.py on one incoming month and
-> confirms every issue in `data/mess_log.csv` was caught.
+💬 **Prompt (updated after Step 1.3: includes the profiling findings and the cleaning-order rule):**
+> Read CLAUDE.md, PROJECT_GUIDE.md (Step 1.4, cleaning checklist A–J), section 7 of checkpoint_review.md, and the top 10
+> issues in reports/data_profile.txt. We're on Step 1.4.
+>
+> Build `src/clean.py` with one function per table (`clean_orders`, `clean_items`, `clean_payments`, `clean_reviews`,
+> `clean_products`, `clean_customers`, `clean_sellers`), each returning `(clean_df, stats_dict)`. It must work on both the
+> raw reference tables and any monthly file in data/incoming or data/holdback. Never modify files in data/.
+>
+> Work through checklist A–J one section at a time. After each section, give me a 2–3 line summary: the decision, the
+> alternative, and why, plus the Excel equivalent. Only stop and ask me when a decision is genuinely debatable.
+>
+> Requirements:
+> 1. Cleaning order: standardize text and convert blanks (including single-space strings) to nulls FIRST, then drop exact
+>    duplicates, then drop key-based duplicates. Report both counts separately in stats.
+> 2. Dates: parse with errors='coerce' and count how many values became null because they were malformed.
+> 3. Handle missing values per column (drop vs fill vs flag), with the reason in a code comment. Keep undelivered orders and
+>    add an `is_delivered` flag.
+> 4. FLAG (don't delete) the real-data logic issues profiling found: carrier pickup before purchase, delivery before pickup,
+>    canceled orders with a delivery date, delivered orders with no delivery date, shipping deadlines far in the future, and
+>    orders with no payment. Use boolean `flag_` columns and count them in stats.
+> 5. Fix the `lenght` column names, read zip codes as text, merge English category names (with `validate=`) and fill
+>    untranslated or missing categories deliberately.
+> 6. Add derived columns: `delivery_days`, `is_late`, `purchase_month`, `total_item_value`.
+>
+> Then write `tests/test_clean.py` (plain Python, no pytest needed) that runs clean.py on one incoming month and checks every
+> injected issue in data/mess_log.csv for that month was caught. Run it on 2017_11 and one holdback month and show me the
+> results as a table: injected vs caught, per mess type. Finally, update interview_notes.md, project_journal.md and the
+> Running metrics.
 
 ✅ **Done when:** clean.py runs on any monthly file, returns stats, and catches every injected issue.
 
