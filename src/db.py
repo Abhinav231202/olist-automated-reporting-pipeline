@@ -1,5 +1,5 @@
 """
-db.py  —  Step 2.1 (+ Step 2.3: views and trigger)
+db.py  —  Step 2.1 (+ Step 2.3: views and trigger, + Step 2.5: KPI views)
 One place that opens the SQLite database, so every script (loader, DQ checks, report)
 connects the same way.
 
@@ -7,8 +7,9 @@ get_connection():
   1. opens db/olist.db (sqlite3 creates the file if it's missing)
   2. turns foreign keys ON for this connection
   3. builds every table from sql/schema.sql if the database has no tables yet
-  4. (re)creates the views (sql/views.sql) and the audit trigger (sql/triggers.sql)
-     on EVERY connection, so they always match the files, even on an existing database
+  4. (re)creates the base views (sql/views.sql), the KPI views (sql/kpis.sql) and the audit
+     trigger (sql/triggers.sql) on EVERY connection, so they always match the files, even on
+     an existing database
 
 Usage:
   python src/db.py   → create the database if needed and log its tables, indexes and FKs
@@ -22,8 +23,13 @@ import sqlite3
 ROOT        = pathlib.Path(__file__).resolve().parent.parent   # DA-Project/
 DB_PATH     = ROOT / "db" / "olist.db"
 SCHEMA_PATH = ROOT / "sql" / "schema.sql"
-# Database objects re-applied on every connection. Order matters if a view ever reads another view.
-OBJECT_SCRIPTS = [ROOT / "sql" / "views.sql", ROOT / "sql" / "triggers.sql"]
+# Database objects re-applied on every connection. ORDER MATTERS: kpis.sql reads the base views,
+# and its LIMIT 0 validation fails if views.sql hasn't created them yet.
+OBJECT_SCRIPTS = [
+    ROOT / "sql" / "views.sql",      # vw_order_facts, vw_item_facts (base views)
+    ROOT / "sql" / "kpis.sql",       # 10 vw_kpi_* views built on the base views
+    ROOT / "sql" / "triggers.sql",   # audit trigger on orders.order_status
+]
 
 log = logging.getLogger(__name__)
 
@@ -43,8 +49,8 @@ def _table_names(conn: sqlite3.Connection) -> list[str]:
 
 def apply_sql_objects(conn: sqlite3.Connection) -> None:
     """
-    Run views.sql and triggers.sql (DROP IF EXISTS + CREATE), so the database always has
-    the current version of every view and trigger.
+    Run views.sql, kpis.sql and triggers.sql (DROP IF EXISTS + CREATE), so the database
+    always has the current version of every view and trigger.
 
     Why every connection, not just at creation: schema.sql only runs on an empty database,
     but views change while the project grows (new KPI views in Step 2.5). Re-applying takes
