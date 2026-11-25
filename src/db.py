@@ -1,5 +1,5 @@
 """
-db.py  —  Step 2.1
+db.py  —  Step 2.1 (+ Step 2.3: views and trigger)
 One place that opens the SQLite database, so every script (loader, DQ checks, report)
 connects the same way.
 
@@ -7,6 +7,8 @@ get_connection():
   1. opens db/olist.db (sqlite3 creates the file if it's missing)
   2. turns foreign keys ON for this connection
   3. builds every table from sql/schema.sql if the database has no tables yet
+  4. (re)creates the views (sql/views.sql) and the audit trigger (sql/triggers.sql)
+     on EVERY connection, so they always match the files, even on an existing database
 
 Usage:
   python src/db.py   → create the database if needed and log its tables, indexes and FKs
@@ -20,6 +22,8 @@ import sqlite3
 ROOT        = pathlib.Path(__file__).resolve().parent.parent   # DA-Project/
 DB_PATH     = ROOT / "db" / "olist.db"
 SCHEMA_PATH = ROOT / "sql" / "schema.sql"
+# Database objects re-applied on every connection. Order matters if a view ever reads another view.
+OBJECT_SCRIPTS = [ROOT / "sql" / "views.sql", ROOT / "sql" / "triggers.sql"]
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +39,29 @@ def _table_names(conn: sqlite3.Connection) -> list[str]:
         "WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
     ).fetchall()
     return [r[0] for r in rows]
+
+
+def apply_sql_objects(conn: sqlite3.Connection) -> None:
+    """
+    Run views.sql and triggers.sql (DROP IF EXISTS + CREATE), so the database always has
+    the current version of every view and trigger.
+
+    Why every connection, not just at creation: schema.sql only runs on an empty database,
+    but views change while the project grows (new KPI views in Step 2.5). Re-applying takes
+    a few milliseconds, because a view stores only its SQL text, not data.
+
+    Each script has its own BEGIN/COMMIT. If one fails halfway (e.g. a typo in a view),
+    the open transaction is rolled back here, so the old views stay and the error is raised.
+    """
+    for script in OBJECT_SCRIPTS:
+        try:
+            conn.executescript(script.read_text(encoding="utf-8"))
+        except sqlite3.Error:
+            if conn.in_transaction:
+                conn.rollback()
+            log.exception("failed to apply %s (previous version kept)", script.name)
+            raise
+    log.debug("applied %s", ", ".join(s.name for s in OBJECT_SCRIPTS))
 
 
 def get_connection(db_path: pathlib.Path | str = DB_PATH) -> sqlite3.Connection:
@@ -59,6 +86,10 @@ def get_connection(db_path: pathlib.Path | str = DB_PATH) -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON")   # before any transaction: inside one it's ignored
     if conn.execute("PRAGMA foreign_keys").fetchone()[0] != 1:
         raise RuntimeError("SQLite build does not support foreign keys")
+    # Page cache: SQLite's default is ~2 MB, so for a 100 MB database every view query
+    # re-reads pages from disk. 64 MB (negative = KiB) made vw_order_facts 2x faster and
+    # vw_item_facts 5x faster (Step 2.3, measured). Per connection, like foreign_keys.
+    conn.execute("PRAGMA cache_size = -65536")
 
     if not _table_names(conn):
         # executescript runs the whole file (many statements). conn.execute runs only one.
@@ -66,11 +97,12 @@ def get_connection(db_path: pathlib.Path | str = DB_PATH) -> sqlite3.Connection:
         conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
         log.info("created schema from %s -> %s", SCHEMA_PATH.name, db_path)
 
+    apply_sql_objects(conn)
     return conn
 
 
 def describe_schema(conn: sqlite3.Connection) -> None:
-    """Log each table with its row count, columns, primary key, foreign keys and indexes."""
+    """Log each table (row count, columns, PK, FKs, indexes), then each view and trigger."""
     for table in _table_names(conn):
         # pragma_table_info / pragma_foreign_key_list / pragma_index_list = SQLite's version
         # of INFORMATION_SCHEMA.COLUMNS / KEY_COLUMN_USAGE / indexes. Table names come from
@@ -88,6 +120,12 @@ def describe_schema(conn: sqlite3.Connection) -> None:
             log.info("%19s FK %s -> %s.%s", "", col, parent, parent_col)
         for (name,) in idx:
             log.info("%19s INDEX %s", "", name)
+
+    # views and triggers live in the same catalogue as tables
+    for kind, name, on_table in conn.execute(
+            "SELECT type, name, tbl_name FROM sqlite_master "
+            "WHERE type IN ('view', 'trigger') ORDER BY type DESC, name"):
+        log.info("%-19s %s%s", name, kind.upper(), f" on {on_table}" if kind == "trigger" else "")
 
 
 def main() -> None:
