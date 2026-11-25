@@ -187,6 +187,10 @@ CREATE TABLE IF NOT EXISTS dq_results (
     check_name  TEXT    NOT NULL,               -- e.g. 'items_price_not_positive'
     failed_rows INTEGER NOT NULL,
     run_at      TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+    -- Step 2.4: ERROR = structural, stops the pipeline; WARNING = known real-data issue.
+    -- Last column on purpose: an existing database gets it from ALTER TABLE ADD COLUMN
+    -- (checks.ensure_severity_column), which always appends at the end.
+    severity    TEXT    NOT NULL DEFAULT 'ERROR' CHECK (severity IN ('ERROR', 'WARNING')),
     PRIMARY KEY (run_id, check_name)            -- each check once per run
 ) STRICT;
 
