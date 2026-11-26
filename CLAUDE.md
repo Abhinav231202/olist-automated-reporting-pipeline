@@ -59,6 +59,11 @@ Also keep the "Running metrics" table at the top of `interview_notes.md` updated
 section for the steps since the last one (same structure: pitch, numbers, behavioral Q&A, technical follow-ups,
 code review findings, self-test). Read section 7 of the existing file before Step 1.4.
 
+## Behavioral answer bank
+`behavioral_answer_bank.md` holds the short, interview-ready answers (graded format: S → T/Signal → A with "I" + why → R with a
+number → L). When a step produces a strong new story or a final number (e.g. the Day 3 end-to-end runtime), update the matching
+answer there and replace any [X] placeholders. Keep answers 120–180 words.
+
 ## End of each day
 When I say "end of day", give me: a 5-question quiz on today's work, then update the
 "Daily recap" section of `interview_notes.md`.

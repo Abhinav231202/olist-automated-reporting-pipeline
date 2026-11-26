@@ -456,6 +456,9 @@ Join fan-out?
 
 ## Step 2.6 — SQL interview drill (45 min)
 
+> **Changed (Nov 25):** done as a self-paced practice pack instead of a live drill (it's interview prep, not pipeline work):
+> `sql/practice_interview_drill.sql` (questions) + `sql/practice_interview_drill_solutions.sql` (tested solutions). See Checkpoint 5, section 9.
+
 💬 **Prompt:**
 > Step 2.6. Quiz me with 8 classic SQL interview questions using the Olist tables, one at a time: find
 > duplicates, delete duplicates keeping one, RANK vs DENSE_RANK vs ROW_NUMBER with ties, customers who
