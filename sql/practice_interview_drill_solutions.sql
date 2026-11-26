@@ -1,6 +1,6 @@
 -- =====================================================================================
 -- Step 2.6: SQL interview drill SOLUTIONS (all tested read-only on db/olist.db, Nov 25, 2026)
--- Scope: 18 loaded months (80,445 orders). Each solution: query → expected result → how it works →
+-- Scope: 19 loaded months (86,612 orders), re-measured after the Step 3.4 demo (June 2018 loaded). Each solution: query → expected result → how it works →
 -- common mistake → the one-line interview answer.
 -- Run one query at a time in DB Browser: click inside it, Ctrl+Enter.
 -- =====================================================================================
@@ -140,15 +140,15 @@ SELECT COUNT(DISTINCT customer_unique_id) AS customers_3plus_consecutive,
        MAX(streak)                        AS longest_streak
 FROM streaks
 WHERE streak >= 3;
--- EXPECTED: 9 customers · longest streak 7 months
---   (streak lengths overall: 1 month 78,443 · 2 months 364 · 3 months 6 · 4, 5 and 7 months: 1 each)
+-- EXPECTED: 10 customers · longest streak 7 months
+--   (streak lengths overall: 1 month 84,494 · 2 months 401 · 3 months 7 · 4, 5 and 7 months: 1 each)
 --
 -- HOW (say it like this): "Turn months into numbers. Within a run of consecutive months, the month number and the
 --   row number both go up by 1, so their difference stays the same. That difference labels each run (an 'island');
 --   GROUP BY it and count."  Example: months 5,6,7,9 → row numbers 1,2,3,4 → differences 4,4,4,5 → runs of 3 and 1.
 -- MISTAKE: using the 'YYYY-MM' text directly (2017-12 → 2018-01 isn't "+1" as text) → convert to year*12 + month.
 -- ALTERNATIVE: LAG(m) and flag where m − LAG(m) = 1. Fine for "has 2 in a row", messier for "3+ in a row".
--- INSIGHT: only 9 of ~77k customers ordered 3 months running. Consistent with the 3% repeat rate: Olist is mostly one-time buyers.
+-- INSIGHT: only 10 of ~84k customers ordered 3 months running. Consistent with the 3% repeat rate: Olist is mostly one-time buyers.
 
 
 -- =====================================================================================
@@ -163,7 +163,8 @@ GROUP BY customer_state
 HAVING COUNT(*) >= 1000                              -- GROUP filters: after grouping (use aggregates)
    AND AVG(review_score) < 4.1
 ORDER BY avg_review;
--- EXPECTED (8 states): BA 3.87 · CE 3.87 · RJ 3.90 · PE 4.01 · ES 4.05 · GO 4.07 · DF 4.08 · SC 4.09
+-- EXPECTED (7 states): BA 3.88 · CE 3.90 · RJ 3.92 · ES 4.05 · PE 4.05 · GO 4.08 · SC 4.10
+--   (SC shows 4.10 only because of rounding: its true average is just under 4.1, so HAVING keeps it)
 --
 -- HOW: logical order FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT.
 --      WHERE filters individual rows (can't see aggregates); HAVING filters groups (can use COUNT/AVG/SUM).
@@ -208,7 +209,7 @@ FROM orders AS o
 LEFT JOIN reviews AS r
   ON  r.order_id = o.order_id
   AND r.review_score = 5;
--- EXPECTED: 80,445 rows (all orders) · 44,999 matched a 5-star review
+-- EXPECTED: 86,612 rows (all orders) · 48,924 matched a 5-star review
 
 -- Filter in WHERE: throws away every row where the review isn't 5 stars, INCLUDING the unmatched (NULL) rows
 SELECT COUNT(*) AS rows_returned
@@ -216,7 +217,7 @@ FROM orders AS o
 LEFT JOIN reviews AS r
   ON r.order_id = o.order_id
 WHERE r.review_score = 5;
--- EXPECTED: 44,999 rows. The LEFT JOIN quietly became an INNER JOIN.
+-- EXPECTED: 48,924 rows. The LEFT JOIN quietly became an INNER JOIN.
 --
 -- HOW: ON decides which right-side rows MATCH (unmatched left rows survive with NULLs). WHERE runs after the join
 --      and removes rows. NULL = 5 is not TRUE, so all unmatched orders disappear.
@@ -241,7 +242,7 @@ FROM seller_rev AS a
 WHERE a.revenue > (SELECT AVG(b.revenue)
                    FROM seller_rev AS b
                    WHERE b.seller_state = a.seller_state);   -- refers to the OUTER row → "correlated"
--- EXPECTED: 536
+-- EXPECTED: 574
 
 -- (b) Window function: compute every state's average in one pass
 WITH seller_rev AS (
@@ -258,7 +259,7 @@ with_avg AS (
 SELECT COUNT(*) AS sellers_above_state_avg
 FROM with_avg
 WHERE revenue > state_avg;
--- EXPECTED: 536 (same answer; about 3× faster here: 0.08 s vs 0.22 s)
+-- EXPECTED: 574 (same answer; about 3× faster here: 0.08 s vs 0.22 s)
 --
 -- HOW: a correlated subquery re-runs once PER OUTER ROW (it references the outer row: a.seller_state). The window
 --      computes each partition's average once and attaches it to every row.

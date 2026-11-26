@@ -2,6 +2,9 @@
 -- Checkpoint 4: SQL practice SOLUTIONS (all tested on db/olist.db)
 -- Run each one in DB Browser (Execute SQL tab): select the query, then press Ctrl+Enter.
 -- Try each question yourself first; read the explanation after.
+-- NOTE (Nov 26): expected numbers RE-MEASURED after the Step 3.4 live demo loaded June 2018:
+--   the DB now holds 19 months (2016-10 … 2018-06, 86,612 orders). If you load 2018-07/08 later, counts grow again.
+--   Your interview STORIES quote the numbers at the time they happened (18 months), which is correct for a story.
 -- =====================================================================================
 
 
@@ -15,7 +18,7 @@ UNION ALL
 SELECT 'payments',                  COUNT(*)              FROM payments
 UNION ALL
 SELECT 'reviews',                   COUNT(*)              FROM reviews;
--- Expected: orders 80,445 · order_items 91,224 · payments 84,238 · reviews 79,776
+-- Expected: orders 86,612 · order_items 98,302 · payments 90,657 · reviews 85,917
 
 
 -- Q2a. How many orders have more than one item?
@@ -28,7 +31,7 @@ FROM (
     GROUP BY order_id
     HAVING COUNT(*) > 1
 );
--- Expected: 8,019
+-- Expected: 8,661
 
 -- Q2b. The most items in a single order.
 SELECT MAX(item_count) AS max_items_in_one_order
@@ -51,18 +54,18 @@ JOIN customers AS c
 GROUP BY c.customer_state
 ORDER BY orders DESC
 LIMIT 5;
--- Expected: SP 32,931 · RJ 10,670 · MG 9,548 · RS 4,544 · PR 4,083
+-- Expected: SP 35,704 · RJ 11,386 · MG 10,265 · RS 4,849 · PR 4,391
 
 
 -- Q4. Reproduce the FAN-OUT bug (deliberately wrong!).
 -- Joining orders to TWO one-to-many tables (items AND payments) multiplies rows:
 -- an order with 2 items and 2 payments appears 2 x 2 = 4 times, so every sum is inflated.
-SELECT COUNT(*)                           AS rows_after_join,      -- should be 80,445 orders...
-       ROUND(SUM(i.total_item_value), 2)  AS inflated_revenue      -- ...and R$ 12,758,298.80
+SELECT COUNT(*)                           AS rows_after_join,      -- should be 86,612 orders...
+       ROUND(SUM(i.total_item_value), 2)  AS inflated_revenue      -- ...and R$ 13,780,975.91
 FROM orders AS o
 JOIN order_items AS i ON i.order_id = o.order_id
 JOIN payments    AS p ON p.order_id = o.order_id;
--- Expected: 95,413 rows · R$ 13,357,783.42  (+4.7% overstated)  -> compare with Q8 for the fix
+-- Expected: 102,803 rows · R$ 14,432,539.50  (+4.7% overstated)  -> compare with Q8 for the fix
 
 
 -- Q5a. Orders with NO items (anti-join).
@@ -73,7 +76,7 @@ FROM orders AS o
 LEFT JOIN order_items AS i
   ON i.order_id = o.order_id
 WHERE i.order_id IS NULL;
--- Expected: 669
+-- Expected: 676
 
 -- Q5b. Their top 3 statuses (are they errors, or expected?).
 SELECT o.order_status,
@@ -85,7 +88,7 @@ WHERE i.order_id IS NULL
 GROUP BY o.order_status
 ORDER BY orders DESC
 LIMIT 3;
--- Expected: unavailable 574 · canceled 87 · created 5  -> mostly expected (never fulfilled)
+-- Expected: unavailable 578 · canceled 90 · created 5  -> mostly expected (never fulfilled)
 
 -- Alternative anti-join with NOT EXISTS (same answer; often clearer to read):
 SELECT COUNT(*) AS orders_without_items
@@ -99,9 +102,10 @@ SELECT table_name,
        COUNT(*)         AS files_loaded,
        SUM(rows_loaded) AS rows_loaded
 FROM load_log
+WHERE status = 'success'          -- failed attempts are logged too (the Step 3.4 bad-file test)
 GROUP BY table_name
 ORDER BY table_name;
--- Expected: each fact table 18 files (orders 80,445 · order_items 91,224 · payments 84,238 · reviews 79,776);
+-- Expected: each fact table 19 files (orders 86,612 · order_items 98,302 · payments 90,657 · reviews 85,917);
 --           each dimension 1 (customers 99,441 · products 32,951 · sellers 3,095 · geolocation 19,015)
 
 
@@ -118,12 +122,12 @@ GROUP BY customer_state
 HAVING COUNT(*) >= 1000
 ORDER BY late_pct DESC
 LIMIT 3;
--- Expected: CE 16.4% · RJ 14.0% · BA 13.9%
+-- Expected: CE 15.3% · BA 13.3% · RJ 13.1%
 
--- Overall late rate in the loaded months (scope: 18 months, holdback not loaded):
+-- Overall late rate in the loaded months (scope: 19 months; Jul–Aug 2018 still in holdback):
 SELECT ROUND(100.0 * AVG(is_late), 1) AS overall_late_pct
 FROM vw_order_facts;
--- Expected: 7.5%  (vs 6.8% on the whole raw dataset: different scope)
+-- Expected: 7.1%  (7.5% before June was loaded; 6.8% on the whole raw dataset: always state the scope)
 
 
 -- Q8. Orders where payments and items differ by more than R$1, WITHOUT fan-out.  (The fix for Q4.)
@@ -144,7 +148,7 @@ FROM item_totals AS it
 JOIN payment_totals AS pt
   ON pt.order_id = it.order_id
 WHERE ABS(it.items_total - pt.paid_total) > 1;
--- Expected: 216  (mostly installment interest / vouchers: tracked as a WARNING in Step 2.4)
+-- Expected: 223  (mostly installment interest / vouchers: tracked as a WARNING in Step 2.4)
 
 -- See a few of them:
 WITH item_totals AS (SELECT order_id, SUM(total_item_value) AS items_total FROM order_items GROUP BY order_id),
@@ -170,7 +174,7 @@ SELECT
            HAVING COUNT(*) > 1))                          AS repeat_customers,
     (SELECT COUNT(DISTINCT customer_unique_id)
      FROM vw_order_facts)                                 AS total_customers;
--- Expected: 2,372 repeat customers out of 77,804 (about 3%)
+-- Expected: 2,573 repeat customers out of 83,744 (about 3%)
 
 -- Try the WRONG key to see the trap (should be 0):
 SELECT COUNT(*) AS repeat_by_customer_id
@@ -185,7 +189,7 @@ FROM vw_item_facts
 GROUP BY category
 ORDER BY revenue DESC
 LIMIT 3;
--- Expected: health_beauty ≈ 1,055,957 · watches_gifts ≈ 1,024,230 · bed_bath_table ≈ 1,009,741
+-- Expected: health_beauty ≈ 1,181,155 · watches_gifts ≈ 1,120,085 · bed_bath_table ≈ 1,097,766
 
 
 -- BONUS. Q3 plus each state's % of all orders (window function preview for Step 2.5).
@@ -198,4 +202,4 @@ JOIN customers AS c ON c.customer_id = o.customer_id
 GROUP BY c.customer_state
 ORDER BY orders DESC
 LIMIT 5;
--- Expected: SP 32,931 ≈ 40.9% · RJ ≈ 13.3% · MG ≈ 11.9% · RS ≈ 5.6% · PR ≈ 5.1%
+-- Expected: SP 35,704 ≈ 41.2% · RJ ≈ 13.1% · MG ≈ 11.9% · RS ≈ 5.6% · PR ≈ 5.1%

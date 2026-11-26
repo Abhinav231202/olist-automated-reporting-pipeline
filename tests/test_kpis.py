@@ -163,8 +163,11 @@ def main() -> int:
         check(results, "V2 three ways agree (6,735.00)", v2 == [6735.0] * 3, str(v2))
         tie = pd.read_sql(sols[14], conn).iloc[0].tolist()
         check(results, "V2 tie demo: OFFSET wrong, others right", tie == [100, 90, 90], str(tie))
+        # Not fixed counts: they change with every month loaded (7 vs 25 at 18 months,
+        # 7 vs 27 after the Step 3.4 demo added 2018-06). The LESSON is what we test:
+        # filtering rows first (WHERE) keeps more categories than filtering groups (HAVING).
         v3 = [len(pd.read_sql(sols[k], conn)) for k in (15, 16)]
-        check(results, "V3 HAVING vs WHERE counts (7 vs 25)", v3 == [7, 25], str(v3))
+        check(results, "V3 HAVING vs WHERE differ (HAVING < WHERE)", 0 < v3[0] < v3[1], str(v3))
     finally:
         conn.close()
 

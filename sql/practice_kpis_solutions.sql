@@ -525,6 +525,8 @@ HAVING COUNT(*) >= 100
 ORDER BY items_over_200 DESC;
 -- EXPECTED: (a) 7 categories (computers first: 1,116.97 avg over 170 items)
 --           (b) 25 categories: many cheap categories still sell 100+ items above R$200.
+--           (After Step 3.4 loaded 2018-06, 19 months: (a) 7, (b) 27. Other EXPECTED values in this
+--           file are the 18-month snapshot too; recount them if you practise on the current DB.)
 -- WHY DIFFERENT: (b) throws away cheap items BEFORE counting, so COUNT(*) and AVG only see
 -- expensive items. (a) keeps every item and judges the group's average.
 -- Rules: WHERE can't use aggregates (WHERE AVG(price) > 200 is an error: groups don't exist

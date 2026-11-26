@@ -16,7 +16,7 @@
 -- Q5. Orders with NO items (anti-join), and their top 3 order statuses. (LEFT JOIN ... IS NULL)
 
 
--- Q6. From load_log: number of files and total rows loaded per table.
+-- Q6. From load_log: number of files and total rows loaded per table (successful loads only: status = 'success').
 
 
 -- Q7. Late-delivery % by customer state: delivered orders only, states with >= 1000 orders, worst 3. (vw_order_facts)
